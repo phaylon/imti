@@ -1,7 +1,9 @@
-#lang racket
+#lang racket/base
 
 (require
   ansi
+  racket/list
+  racket/set
   racket/contract)
 
 (define base/fg 30)

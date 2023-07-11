@@ -1,9 +1,12 @@
-#lang racket
+#lang racket/base
 
 (require
   "util.rkt"
   "geometry.rkt"
   "style.rkt"
+  racket/list
+  racket/function
+  racket/string
   racket/contract)
 
 (module+ test
@@ -26,6 +29,12 @@
 (define (element-split elem pos)
   (values (element-substring elem 0 pos)
           (element-substring elem pos)))
+
+(define (element-render elem)
+  (string-append
+    (cond ((element-style elem) => style-render)
+          (else ""))
+    (element-content elem)))
 
 (module+ test
   (define (t:el cnt) (element #f cnt))
@@ -164,6 +173,11 @@
                 (element st cnt-fitted)
                 (+ (area-column ar) (position-column pos))))))))))
 
+(define (frame-render f)
+  (map (lambda (line-elems)
+         (apply string-append (map element-render line-elems)))
+       (frame-buffer f)))
+
 (module+ test
   (define (t:fr h w) (make-frame (size h w)))
   (define (t:lines f)
@@ -208,5 +222,6 @@
     (make-frame (-> size? frame?))
     (frame-height (-> frame? exact-nonnegative-integer?))
     (frame-width (-> frame? exact-nonnegative-integer?))
-    (frame-write (-> frame? area? position? style? string? frame?))))
+    (frame-write (-> frame? area? position? (or/c #f style?) string? frame?))
+    (frame-render (-> frame? (listof string?)))))
 
