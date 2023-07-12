@@ -8,6 +8,16 @@
 (module+ test
   (require rackunit))
 
+(define (orientation? v)
+  (or (equal? v 'v)
+      (equal? v 'h)))
+
+(define (edge? v)
+  (or (equal? v 'top)
+      (equal? v 'bottom)
+      (equal? v 'left)
+      (equal? v 'right)))
+
 (struct position (line column) #:transparent)
 
 (define (make-position #:line (line 0) #:column (column 0))
@@ -73,21 +83,19 @@
     ((a1 as) #:break (not a0))
     (inter/area a0 a1)))
 
-(define (area-split-v a pos)
-  (cond ((< pos 1) (values empty-area a))
-        ((> pos (area-last-line a)) (values a empty-area))
-        (else
-         (values
-           (subarea a 0 0 pos (area-width a))
-           (subarea a pos 0 (- (area-height a) pos) (area-width a))))))
-
-(define (area-split-h a pos)
-  (cond ((< pos 1) (values empty-area a))
-        ((> pos (area-last-column a)) (values a empty-area))
-        (else
-         (values
-           (subarea a 0 0 (area-height a) pos)
-           (subarea a 0 pos (area-height a) (- (area-width a) pos))))))
+(define (area-split a o pos)
+  (define (split pos-last len make)
+    (cond ((< pos 1) (values empty-area a))
+          ((> pos (pos-last a)) (values a empty-area))
+          (else
+           (values
+             (make 0 pos)
+             (make pos (- (len a) pos))))))
+  (match o
+    ('v (split area-last-line area-height
+          (lambda (l h) (subarea a l 0 h (area-width a)))))
+    ('h (split area-last-column area-width
+          (lambda (c w) (subarea a 0 c (area-height a) w))))))
 
 (module+ test
   (define (t:a l c h w) (area (position l c) (size h w)))
@@ -125,26 +133,28 @@
       (t:a 3 50 1 10))
     #f)
   (check-equal?
-    (call-with-values (thunk (area-split-v (t:a 2 2 4 4) 2)) list)
+    (call-with-values (thunk (area-split (t:a 2 2 4 4) 'v 2)) list)
     (list (t:a 2 2 2 4) (t:a 4 2 2 4)))
   (check-equal?
-    (call-with-values (thunk (area-split-v (t:a 2 2 4 4) 0)) list)
+    (call-with-values (thunk (area-split (t:a 2 2 4 4) 'v 0)) list)
     (list empty-area (t:a 2 2 4 4)))
   (check-equal?
-    (call-with-values (thunk (area-split-v (t:a 2 2 4 4) 4)) list)
+    (call-with-values (thunk (area-split (t:a 2 2 4 4) 'v 4)) list)
     (list (t:a 2 2 4 4) empty-area))
   (check-equal?
-    (call-with-values (thunk (area-split-h (t:a 2 2 4 4) 2)) list)
+    (call-with-values (thunk (area-split (t:a 2 2 4 4) 'h 2)) list)
     (list (t:a 2 2 4 2) (t:a 2 4 4 2)))
   (check-equal?
-    (call-with-values (thunk (area-split-h (t:a 2 2 4 4) 0)) list)
+    (call-with-values (thunk (area-split (t:a 2 2 4 4) 'h 0)) list)
     (list empty-area (t:a 2 2 4 4)))
   (check-equal?
-    (call-with-values (thunk (area-split-h (t:a 2 2 4 4) 4)) list)
+    (call-with-values (thunk (area-split (t:a 2 2 4 4) 'h 4)) list)
     (list (t:a 2 2 4 4) empty-area)))
 
 (provide
   (contract-out
+    (orientation? (-> any/c boolean?))
+    (edge? (-> any/c boolean?))
     (struct position
       ((line exact-nonnegative-integer?)
        (column exact-nonnegative-integer?)))
@@ -181,10 +191,9 @@
                  exact-nonnegative-integer?
                  exact-nonnegative-integer?
                  area?))
-    (area-split-v
-      (-> area? exact-nonnegative-integer? (values area? area?)))
-    (area-split-h
-      (-> area? exact-nonnegative-integer? (values area? area?)))
+    (area-split
+      (-> area? orientation? exact-nonnegative-integer?
+          (values area? area?)))
     (zero-sized-area? (-> area? boolean?))
     (position-fits-area? (-> position? area? boolean?))))
 

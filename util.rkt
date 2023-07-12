@@ -8,7 +8,16 @@
     (substring str 0 len)
     str))
 
+(define (values/reverse proc)
+  (apply values (reverse (call-with-values proc list))))
+
+(define (chain v . procs)
+  (for/fold ((v v)) ((proc procs))
+    (proc v)))
+
 (provide
   (contract-out
+    (chain (->* (any/c) #:rest (listof procedure?) any))
+    (values/reverse (-> procedure? any))
     (string-truncate (-> string? exact-nonnegative-integer? string?))))
 
