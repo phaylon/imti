@@ -2,6 +2,7 @@
 
 (require
   racket/match
+  racket/function
   racket/contract)
 
 (module+ test
@@ -72,6 +73,22 @@
     ((a1 as) #:break (not a0))
     (inter/area a0 a1)))
 
+(define (area-split-v a pos)
+  (cond ((< pos 1) (values empty-area a))
+        ((> pos (area-last-line a)) (values a empty-area))
+        (else
+         (values
+           (subarea a 0 0 pos (area-width a))
+           (subarea a pos 0 (- (area-height a) pos) (area-width a))))))
+
+(define (area-split-h a pos)
+  (cond ((< pos 1) (values empty-area a))
+        ((> pos (area-last-column a)) (values a empty-area))
+        (else
+         (values
+           (subarea a 0 0 (area-height a) pos)
+           (subarea a 0 pos (area-height a) (- (area-width a) pos))))))
+
 (module+ test
   (define (t:a l c h w) (area (position l c) (size h w)))
   (check-equal? (area-last-line (t:a 2 10 3 10)) 5)
@@ -107,7 +124,24 @@
       (t:a 2 20 3 30)
       (t:a 3 50 1 10))
     #f)
-  )
+  (check-equal?
+    (call-with-values (thunk (area-split-v (t:a 2 2 4 4) 2)) list)
+    (list (t:a 2 2 2 4) (t:a 4 2 2 4)))
+  (check-equal?
+    (call-with-values (thunk (area-split-v (t:a 2 2 4 4) 0)) list)
+    (list empty-area (t:a 2 2 4 4)))
+  (check-equal?
+    (call-with-values (thunk (area-split-v (t:a 2 2 4 4) 4)) list)
+    (list (t:a 2 2 4 4) empty-area))
+  (check-equal?
+    (call-with-values (thunk (area-split-h (t:a 2 2 4 4) 2)) list)
+    (list (t:a 2 2 4 2) (t:a 2 4 4 2)))
+  (check-equal?
+    (call-with-values (thunk (area-split-h (t:a 2 2 4 4) 0)) list)
+    (list empty-area (t:a 2 2 4 4)))
+  (check-equal?
+    (call-with-values (thunk (area-split-h (t:a 2 2 4 4) 4)) list)
+    (list (t:a 2 2 4 4) empty-area)))
 
 (provide
   (contract-out
@@ -147,6 +181,10 @@
                  exact-nonnegative-integer?
                  exact-nonnegative-integer?
                  area?))
+    (area-split-v
+      (-> area? exact-nonnegative-integer? (values area? area?)))
+    (area-split-h
+      (-> area? exact-nonnegative-integer? (values area? area?)))
     (zero-sized-area? (-> area? boolean?))
     (position-fits-area? (-> position? area? boolean?))))
 
