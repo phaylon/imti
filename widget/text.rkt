@@ -63,11 +63,42 @@
     (text-to-lines cnt (area-width a) wrap)
     #:style st))
 
+(define (render-log f a entries #:style (st #f) #:wrap (wrap 'whitespace))
+  (let render-next
+    ((f (render-clear f a))
+     (entries (reverse entries))
+     (lines '())
+     (line-index (sub1 (area-height a))))
+    (cond
+      ((negative? line-index)
+       f)
+      ((and (empty? lines) (empty? entries))
+       f)
+      ((empty? lines)
+       (render-next f
+         (rest entries)
+         (text-to-lines (first entries) (area-width a) wrap)
+         line-index))
+      (else
+       (render-next
+         (render-text f (subarea a line-index 0 1 (area-width a))
+           (first lines)
+           #:wrap #f
+           #:style st)
+         entries
+         (rest lines)
+         (sub1 line-index))))))
+
 (provide
   (contract-out
     (text-to-lines
       (-> string? exact-positive-integer? (or/c #f 'whitespace 'exact)
           (listof string?)))
+    (render-log
+      (->* (frame? area? (listof string?))
+           (#:style (or/c #f style?)
+            #:wrap (or/c #f 'whitespace 'exact))
+           frame?))
     (render-text-lines
       (->* (frame? area? (listof string?))
            (#:style (or/c #f style?))

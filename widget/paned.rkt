@@ -15,7 +15,9 @@
   (define (find-pane-size a-size)
     (define sz-full (a-size a))
     (define sz-scaled (* (/ sz-full (+ 1 scale)) scale))
-    (floor (min max-size (max min-size sz-scaled))))
+    (floor
+      (min (or max-size (a-size a))
+           (max (or min-size 0) sz-scaled))))
   (define-values (split-o split-pos at-end?)
     (match e
       ('top
