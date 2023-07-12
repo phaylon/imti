@@ -32,8 +32,7 @@
 
 (define (element-render elem)
   (string-append
-    (cond ((element-style elem) => style-render)
-          (else ""))
+    (style-render (or (element-style elem) default-style))
     (element-content elem)))
 
 (module+ test
@@ -156,22 +155,26 @@
     (normalize-content "abc\ndef ghi\tjkl")
     "abc<nl>def ghi<tab>jkl"))
 
-(define (frame-write f ar pos st cnt)
-  (if (not (position-fits-area? pos ar))
+(define (frame-write f a pos st cnt)
+  (define f-line (+ (area-line a) (position-line pos)))
+  (define f-column (+ (area-column a) (position-column pos)))
+  (if (or (not (position-fits-area? pos a))
+          (>= f-line (frame-height f))
+          (>= f-column (frame-width f)))
     f
     (let* ((cnt-norm (normalize-content cnt))
-           (max-len (- (area-width ar) (position-column pos)))
+           (max-len (- (area-width a) (position-column pos)))
            (cnt-fitted (string-truncate cnt-norm max-len)))
       (struct-copy frame f
         (buffer
           (list-update
             (frame-buffer f)
-            (+ (area-line ar) (position-line pos))
+            f-line
             (lambda (line-elems)
               (line-insert
                 line-elems
                 (element st cnt-fitted)
-                (+ (area-column ar) (position-column pos))))))))))
+                f-column))))))))
 
 (define (frame-render f)
   (map (lambda (line-elems)

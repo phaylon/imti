@@ -57,6 +57,8 @@
           #:modes (modes '()))
   (style fg bg modes))
 
+(define default-style (make-style))
+
 (define (style-map-resolve tbl v base)
   (+ base (cdr (assoc (or v 'default) tbl))))
 
@@ -77,6 +79,7 @@
       ((fg style-color?)
        (bg style-color?)
        (modes (set/c style-mode?))))
+    (default-style style?)
     (make-style
       (->* ()
            (#:fg style-color?
