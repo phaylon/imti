@@ -18,7 +18,10 @@
 
 (terminal-loop
   (lambda (f a)
-    (render-selection (render-clear f a) a (unbox model)))
+    (render-with-padding f a
+      (lambda (f a)
+        (render-selection (render-clear f a) a (unbox model)))
+      #:pad 1 #:h 4 #:min-height 7))
   (match-lambda
     ((== (key #\D (set 'control)))
      'break)
