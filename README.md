@@ -1,3 +1,3 @@
 imti
 ====
-README text here.
+Immediate Mode Terminal Interfaces.
