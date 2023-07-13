@@ -39,11 +39,13 @@
     line))
 
 (define (text-to-lines cnt max-len wrap-mode)
-  (let ((lines (string-split cnt "\n" #:trim? #f #:repeat? #f)))
-    (flatten
-      (map (lambda (line)
-             (wrap-line (string-normalize-spaces line) max-len wrap-mode))
-           lines))))
+  (if (< max-len 0)
+    (list)
+    (let ((lines (string-split cnt "\n" #:trim? #f #:repeat? #f)))
+      (flatten
+        (map (lambda (line)
+               (wrap-line (string-normalize-spaces line) max-len wrap-mode))
+             lines)))))
 
 (define (render-text-lines f a lines #:style (st #f))
   (let write-line
