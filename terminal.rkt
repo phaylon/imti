@@ -9,6 +9,7 @@
   racket/port
   racket/function
   racket/match
+  racket/set
   racket/contract)
 
 (define (terminal-push . vs)
@@ -22,9 +23,6 @@
     (unless (empty? lines)
       (terminal-push (goto line-number 1) (first lines))
       (present-next (rest lines) (add1 line-number)))))
-
-(define (any-bytes-evt)
-  (peek-bytes-evt 1 0 #f (current-input-port)))
 
 (define (error-protect proc)
   (let/ec return/success
@@ -43,12 +41,15 @@
 (define (terminal-loop
           draw-proc
           input-proc
-          #:evt (user-evt never-evt)
+          #:escape-timeout (esc-timeout 50)
+          #:evt (user-evt-proc (thunk never-evt))
           #:signals (user-signals '()))
   ; state
   (define last-screen-size-report (box #f))
   ; handlers
   (define signals (prepare-signals user-signals))
+  (define (any-bytes-evt (n 1))
+    (peek-bytes-evt n 0 #f (current-input-port)))
   (define (try-redraw)
     (define (redraw ssr)
       (let* ((height (screen-size-report-rows ssr))
@@ -66,20 +67,34 @@
            (lambda (handler) ((cdr handler))))
           (else 'ignore)))
   (define (handle-input-available-evt v)
-    (match (lex-lcd-input (current-input-port))
-      ((? eof-object?)
-       'break)
-      ((? screen-size-report? ssr)
-       (set-box! last-screen-size-report ssr)
-       'redraw)
-      ((? key? k)
-       (input-proc k))
-      (_ 'ignore)))
+    (cond
+      ((equal? (bytes->list v) (list 27))
+       (sync
+         (handle-evt
+          (any-bytes-evt 2)
+           handle-input-available-evt)
+         (handle-evt
+           (alarm-evt (+ (current-inexact-milliseconds) esc-timeout))
+           (thunk*
+             (read-byte (current-input-port))
+             (input-proc (key 'escape (set)))
+             'redraw))))
+      (else
+       (match (lex-lcd-input (current-input-port))
+         ((? eof-object?)
+          'break)
+         ((? screen-size-report? ssr)
+          (set-box! last-screen-size-report ssr)
+          'redraw)
+         ((? key? k)
+          (input-proc k))
+         (_ 'ignore)))))
   ; terminal env
   (define (terminal-setup)
     (tty-raw!)
     (for-each capture-signal! (map car signals))
     (terminal-push
+      (dec-soft-terminal-reset)
       (dec-save-cursor)
       (hide-cursor)
       (set-mode alternate-screen-buffer-mode)
@@ -91,14 +106,17 @@
     (terminal-push
       (reset-mode alternate-screen-buffer-mode)
       (show-cursor)
-      (dec-restore-cursor))
+      (dec-restore-cursor)
+      (dec-soft-terminal-reset))
     (for-each release-signal! (map car signals))
     (tty-restore!))
   ; main loop
   (define (terminal-inner-loop)
     (let continue ()
+      (terminal-push
+        (dec-soft-terminal-reset))
       (define op
-        (sync (handle-evt user-evt identity)
+        (sync (user-evt-proc)
               (handle-evt next-signal-evt handle-signal-evt)
               (handle-evt (any-bytes-evt) handle-input-available-evt)))
       (match op
@@ -128,7 +146,8 @@
     (terminal-loop
       (->* ((-> frame? area? frame?)
             (-> key? terminal-loop-control?))
-           (#:evt (evt/c terminal-loop-control?)
-            #:signals (listof (cons/c symbol? terminal-loop-control?)))
+           (#:evt (-> (evt/c terminal-loop-control?))
+            #:signals (listof (cons/c symbol? terminal-loop-control?))
+            #:escape-timeout exact-positive-integer?)
            any))))
 
