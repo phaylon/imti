@@ -147,7 +147,7 @@
       (->* ((-> frame? area? frame?)
             (-> key? terminal-loop-control?))
            (#:evt (-> (evt/c terminal-loop-control?))
-            #:signals (listof (cons/c symbol? terminal-loop-control?))
+            #:signals (listof (cons/c symbol? (-> terminal-loop-control?)))
             #:escape-timeout exact-positive-integer?)
            any))))
 
