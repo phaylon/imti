@@ -77,7 +77,7 @@
       ((empty? lines)
        (render-next f
          (rest entries)
-         (text-to-lines (first entries) (area-width a) wrap)
+         (reverse (text-to-lines (first entries) (area-width a) wrap))
          line-index))
       (else
        (render-next
