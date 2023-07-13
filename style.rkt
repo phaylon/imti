@@ -6,10 +6,6 @@
   racket/set
   racket/contract)
 
-(define base/fg 30)
-(define base/bg 40)
-(define base/mode 0)
-
 (define color-map
   `((black          . 0)
     (red            . 1)
@@ -19,24 +15,25 @@
     (magenta        . 5)
     (cyan           . 6)
     (white          . 7)
-    (default        . 9)
-    (bright-black   . 60)
-    (bright-red     . 61)
-    (bright-green   . 62)
-    (bright-yellow  . 63)
-    (bright-blue    . 64)
-    (bright-magenta . 65)
-    (bright-cyan    . 66)
-    (bright-white   . 67)))
+    (grey           . 8)
+    (gray           . 8)
+    (bright-red     . 9)
+    (bright-green   . 10)
+    (bright-yellow  . 11)
+    (bright-blue    . 12)
+    (bright-magenta . 13)
+    (bright-cyan    . 14)
+    (bright-white   . 15)))
 
 (define (style-color? v)
-  (and (assoc v color-map)
-       #t))
+  (or (and (exact-nonnegative-integer? v) (<= 0 v 255) #t)
+      (and (assoc v color-map) #t)))
 
 (define mode-map
   `((default        . 0)
     (bold           . 1)
     (faint          . 2)
+    (italic         . 3)
     (italic/inverse . 3)
     (underline      . 4)
     (blink-slow     . 5)
@@ -46,44 +43,53 @@
     (crossed-out    . 9)))
 
 (define (style-mode? v)
-  (and (assoc v mode-map)
-       #t))
+  (and (assoc v mode-map) #t))
 
 (struct style (fg bg modes) #:transparent)
 
-(define (make-style
-          #:fg (fg #f)
-          #:bg (bg #f)
-          #:modes (modes '()))
+(define (make-style #:fg (fg #f) #:bg (bg #f) #:modes (modes (set)))
   (style fg bg modes))
 
 (define default-style (make-style))
 
-(define (style-map-resolve tbl v base)
-  (+ base (cdr (assoc (or v 'default) tbl))))
+(define (style-mode-resolve v)
+  (cdr (assoc (or v 'default) mode-map)))
+
+(define (style-color-resolve v)
+  (cond ((symbol? v)
+         (cdr (assoc v color-map)))
+        ((exact-nonnegative-integer? v)
+         v)))
 
 (define (style-render st)
-  (define codes
-    (flatten
-      (list (style-map-resolve mode-map 'default base/mode)
-            (map (lambda (mode)
-                   (style-map-resolve mode-map mode base/mode))
-                 (set->list (style-modes st)))
-            (style-map-resolve color-map (style-fg st) base/fg)
-            (style-map-resolve color-map (style-bg st) base/bg))))
-  (apply string-append (map select-graphic-rendition codes)))
+  (string-append
+    (select-graphic-rendition (style-mode-resolve 'default))
+    (apply string-append
+      (map (compose select-graphic-rendition
+                    style-mode-resolve)
+           (set->list (style-modes st))))
+    (cond ((style-fg st)
+           =>
+           (compose1 select-xterm-256-text-color
+                     style-color-resolve))
+          (else ""))
+    (cond ((style-bg st)
+           =>
+           (compose1 select-xterm-256-background-color
+                     style-color-resolve))
+          (else ""))))
 
 (provide
   (contract-out
     (struct style
-      ((fg style-color?)
-       (bg style-color?)
+      ((fg (or/c #f style-color?))
+       (bg (or/c #f style-color?))
        (modes (set/c style-mode?))))
     (default-style style?)
     (make-style
       (->* ()
-           (#:fg style-color?
-            #:bg style-color?
+           (#:fg (or/c #f style-color?)
+            #:bg (or/c #f style-color?)
             #:modes (set/c style-mode?))
            style?))
     (style-color? (-> any/c boolean?))

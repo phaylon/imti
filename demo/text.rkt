@@ -6,17 +6,21 @@
   racket/set
   racket/list
   racket/match)
-    
+
+(define modes (list 'faint 'default 'bold))
 (define styles
   (append
     (for*/list
-      ((m (list 'faint 'default 'bold))
+      ((m modes)
        (c (list 'red 'green 'blue)))
       (make-style #:fg c #:modes (set m)))
     (for*/list
-      ((m (list 'faint 'default 'bold))
+      ((m modes)
        (c (list 'bright-red 'bright-green 'bright-blue)))
-      (make-style #:fg c #:modes (set m)))))
+      (make-style #:fg c #:modes (set m)))
+    (for*/list
+      ((m modes))
+      (make-style #:modes (set m)))))
 
 (terminal-loop
   (lambda (f a)
@@ -32,7 +36,13 @@
             f
             (show (render-text f
                     (subarea a n n 1 (- (area-width a) n))
-                    "Immediate Mode Terminal Interfaces"
+                    (format
+                      "Immediate Mode Terminal Interfaces in ~a and ~a mode"
+                      (or (style-fg (first sts))
+                          "default color")
+                      (or (and (not (set-empty? (style-modes (first sts))))
+                               (set-first (style-modes (first sts))))
+                          "default"))
                     #:style (first sts))
                   (add1 n)
                   (rest sts)))))

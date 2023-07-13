@@ -48,8 +48,8 @@
 (define empty-area (area (position 0 0) (size 0 0)))
 
 (define (zero-sized-area? a)
-  (or (= (area-height a) 0)
-      (= (area-width a) 0)))
+  (or (<= (area-height a) 0)
+      (<= (area-width a) 0)))
 
 (define (position-fits-area? pos ar)
   (and (< (position-line pos) (area-height ar))

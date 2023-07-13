@@ -59,9 +59,11 @@
         (rest lines)))))
 
 (define (render-text f a cnt #:style (st #f) #:wrap (wrap 'whitespace))
-  (render-text-lines f a
-    (text-to-lines cnt (area-width a) wrap)
-    #:style st))
+  (if (zero-sized-area? a)
+    f
+    (render-text-lines f a
+      (text-to-lines cnt (area-width a) wrap)
+      #:style st)))
 
 (define (render-log f a entries #:style (st #f) #:wrap (wrap 'whitespace))
   (let render-next
