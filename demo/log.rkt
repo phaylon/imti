@@ -8,9 +8,16 @@
   racket/function
   racket/match)
 
-(define entries '("press keys for log entries"))
+(define entries '("press keys to see key log entries"))
 (define (current-entries) entries)
 (define (push-entry! e) (set! entries (append entries (list e))))
+
+(define (timeout-message-evt)
+  (handle-evt
+    (alarm-evt (+ (current-inexact-milliseconds) 1000))
+    (thunk*
+      (push-entry! "no input action for one second")
+      'redraw)))
 
 (terminal-loop
   (lambda (f a)
@@ -19,17 +26,11 @@
         (render-clear f a))
       (lambda (f)
         (render-log f a (current-entries)))))
-  (match-lambda
-    ((== (key #\D (set 'control)))
-     'break)
-    (other
-     (push-entry! (~a other))
-     'redraw)
-    (_ 'redraw))
-  #:evt (thunk
-          (handle-evt
-            (alarm-evt (+ (current-inexact-milliseconds) 1000))
-            (thunk*
-              (push-entry! "no action for one second")
-              'redraw))))
+  (lambda (k)
+    (control-chain k
+      (exit-controller)
+      (lambda (k)
+        (push-entry! (~a k))
+        'redraw)))
+  #:evt timeout-message-evt)
 

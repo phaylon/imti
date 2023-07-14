@@ -9,8 +9,7 @@
 (terminal-loop
   (lambda (f a)
     (render-clear f a))
-  (match-lambda
-    ((== (key #\D (set 'control)))
-     'break)
-    (_ 'redraw)))
+  (lambda (k)
+    (control-chain k
+      (exit-controller))))
 

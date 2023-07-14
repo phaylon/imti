@@ -4,10 +4,14 @@
   "../geometry.rkt"
   "../style.rkt"
   "../frame.rkt"
+  "../terminal.rkt"
   "base.rkt"
   "text.rkt"
+  ansi
   racket/function
   racket/list
+  racket/set
+  racket/match
   racket/format
   racket/contract)
 
@@ -229,4 +233,37 @@
             #:selected-style (or/c #f style?)
             #:not-selected-style (or/c #f style?))
            frame?))))
+
+(define (selection-controller sm set-sm!
+          #:wrap? (wrap? #f)
+          #:key-deselect (key-deselect #f)
+          #:key-next (key-next (key 'down (set)))
+          #:key-previous (key-previous (key 'up (set)))
+          #:key-first (key-first (key 'home (set)))
+          #:key-last (key-last (key 'end (set))))
+  (match-lambda
+    ((== key-next)
+     (set-sm! (selection-model-select-next sm wrap?)))
+    ((== key-previous)
+     (set-sm! (selection-model-select-previous sm wrap?)))
+    ((== key-first)
+     (set-sm! (selection-model-select-first sm)))
+    ((== key-last)
+     (set-sm! (selection-model-select-last sm)))
+    ((== key-deselect)
+     (set-sm! (selection-model-select sm #f)))
+    (_ #f)))
+
+(provide
+  (contract-out
+    (selection-controller
+      (->* (selection-model?
+            (-> selection-model? terminal-loop-control?))
+           (#:wrap? boolean?
+            #:key-deselect (or/c #f key?)
+            #:key-next (or/c #f key?)
+            #:key-previous (or/c #f key?)
+            #:key-first (or/c #f key?)
+            #:key-last (or/c #f key?))
+           (-> key? (or/c #f terminal-loop-control?))))))
 

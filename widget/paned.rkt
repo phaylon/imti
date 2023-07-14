@@ -9,6 +9,7 @@
   racket/contract)
 
 (define (render-paned f a e pane-proc body-proc
+          #:show-pane? (show-pane? #t)
           #:scale (scale 1)
           #:min (min-size #f)
           #:max (max-size #f))
@@ -32,11 +33,11 @@
     (if at-end?
       (values/reverse (thunk (area-split a split-o split-pos)))
       (area-split a split-o split-pos)))
-  (chain f
-    (lambda (f)
-      (pane-proc f a-pane))
-    (lambda (f)
-      (body-proc f a-body))))
+  (if show-pane?
+    (chain f
+      (lambda (f) (pane-proc f a-pane))
+      (lambda (f) (body-proc f a-body)))
+    (body-proc f a)))
 
 (provide
   (contract-out
@@ -45,6 +46,7 @@
                                (-> frame? area? frame?))
            (#:scale exact-nonnegative-integer?
             #:min exact-nonnegative-integer?
-            #:max exact-nonnegative-integer?)
+            #:max exact-nonnegative-integer?
+            #:show-pane? boolean?)
            frame?))))
 

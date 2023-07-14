@@ -122,7 +122,7 @@
       (match op
         ('break
          (void))
-        ('ignore
+        ((or #f 'ignore)
          (continue))
         ('redraw
          (try-redraw)
@@ -145,7 +145,7 @@
       (-> any/c boolean?))
     (terminal-loop
       (->* ((-> frame? area? frame?)
-            (-> key? terminal-loop-control?))
+            (-> key? (or/c #f terminal-loop-control?)))
            (#:evt (-> (evt/c terminal-loop-control?))
             #:signals (listof (cons/c symbol? (-> terminal-loop-control?)))
             #:escape-timeout exact-positive-integer?)

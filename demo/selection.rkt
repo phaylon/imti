@@ -4,6 +4,7 @@
   "../main.rkt"
   ansi
   racket/set
+  racket/function
   racket/match)
 
 (define model
@@ -20,28 +21,23 @@
   (lambda (f a)
     (render-with-padding f a
       (lambda (f a)
-        (render-selection (render-clear f a) a (unbox model)))
+        (render-paned f a 'top
+          (lambda (f a)
+            (render-text f a
+              (format "selected: ~a"
+                (selection-model-selected-item (unbox model)))))
+          (lambda (f a)
+            (render-selection (render-clear f a) a (unbox model)
+              #:selected-style (make-style #:modes (set 'bold))))
+          #:min 1 #:max 2))
       #:pad 1 #:h 4 #:min-height 7))
-  (match-lambda
-    ((== (key #\D (set 'control)))
-     'break)
-    ((== (key 'down (set)))
-     (set-box! model (selection-model-select-next (unbox model)))
-     'redraw)
-    ((== (key 'up (set)))
-     (set-box! model (selection-model-select-previous (unbox model)))
-     'redraw)
-    ((== (key 'down (set 'control)))
-     (set-box! model (selection-model-select-next (unbox model) #t))
-     'redraw)
-    ((== (key 'up (set 'control)))
-     (set-box! model (selection-model-select-previous (unbox model) #t))
-     'redraw)
-    ((== (key 'home (set)))
-     (set-box! model (selection-model-select-first (unbox model)))
-     'redraw)
-    ((== (key 'end (set)))
-     (set-box! model (selection-model-select-last (unbox model)))
-     'redraw)
-    (_ 'redraw)))
+  (lambda (k)
+    (control-chain k
+      (exit-controller)
+      (selection-controller
+        (unbox model)
+        (lambda (new-model)
+          (set-box! model new-model)
+          'redraw)
+        #:key-deselect (key 'backspace (set))))))
 

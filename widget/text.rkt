@@ -67,6 +67,10 @@
       (text-to-lines cnt (area-width a) wrap)
       #:style st)))
 
+(define (render-text-lambda cnt #:style (st #f) #:wrap (wrap 'whitespace))
+  (lambda (f a)
+    (render-text f a cnt st wrap)))
+
 (define (render-log f a entries #:style (st #f) #:wrap (wrap 'whitespace))
   (let render-next
     ((f (render-clear f a))
@@ -111,5 +115,10 @@
       (->* (frame? area? string?)
            (#:style (or/c #f style?)
             #:wrap (or/c #f 'whitespace 'exact))
-           frame?))))
+           frame?))
+    (render-text-lambda
+      (->* (string?)
+           (#:style (or/c #f style?)
+            #:wrap (or/c #f 'whitespace 'exact))
+           (-> frame? area? frame?)))))
 

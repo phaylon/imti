@@ -47,9 +47,7 @@
                   (add1 n)
                   (rest sts)))))
       #:pad 1))
-  (match-lambda
-    ((== (key #\D (set 'control)))
-     'break)
-    (_ 'redraw)))
-
+  (lambda (k)
+    (control-chain k
+      (exit-controller))))
 

@@ -7,23 +7,39 @@
   racket/sequence
   racket/match)
 
-(define edges (in-cycle '(top right bottom left)))
-(define (current-edge) (sequence-ref edges 0))
-(define (next-edge!) (set! edges (sequence-tail edges 1)))
+(define model (box (make-cycle-model 'top 'right 'bottom 'left)))
+(define show? (box (make-flag-model #t)))
 
 (terminal-loop
   (lambda (f a)
-    (render-paned (render-clear f a) a (current-edge)
+    (render-paned (render-clear f a) a
+      (cycle-model-selected (unbox model))
       (lambda (f a)
-        (render-text f a (symbol->string (current-edge))))
+        (render-text f a
+          (string-append
+            (symbol->string (cycle-model-selected (unbox model)))
+            "\npane")))
       (lambda (f a)
-        (render-text f a "body"))
-      #:min 5 #:max 15))
-  (match-lambda
-    ((== (key #\D (set 'control)))
-     'break)
-    ((== (key #\I (set 'control)))
-     (next-edge!)
-     'redraw)
-    (_ 'redraw)))
+        (render-text f a
+          (string-append
+            "body area\n"
+            (format "pane position: ~a (tab to cycle)\n"
+              (cycle-model-selected (unbox model)))
+            (format "pane visible: ~a (ctrl-v to toggle)\n"
+              (if (flag-model-on? (unbox show?)) "yes" "no")))))
+      #:min 5 #:max 15 #:show-pane? (flag-model-on? (unbox show?))))
+  (lambda (k)
+    (control-chain k
+      (exit-controller)
+      (flag-controller (unbox show?)
+        (lambda (new-flag)
+          (set-box! show? new-flag)
+          'redraw)
+        #:key-toggle (key #\V (set 'control)))
+      (cycle-controller (unbox model)
+        (lambda (new-model)
+          (set-box! model new-model)
+          'redraw)
+        #:key-next (key #\I (set 'control))
+        #:key-previous (key #\I (set 'control 'shift))))))
 
