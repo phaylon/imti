@@ -44,7 +44,7 @@
     (render-paned
       (->* (frame? area? edge? (-> frame? area? frame?)
                                (-> frame? area? frame?))
-           (#:scale exact-nonnegative-integer?
+           (#:scale (and/c rational? positive?)
             #:min exact-nonnegative-integer?
             #:max exact-nonnegative-integer?
             #:show-pane? boolean?)
