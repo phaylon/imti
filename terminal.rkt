@@ -17,12 +17,21 @@
   (flush-output))
 
 (define (terminal-present f)
+  (terminal-push (hide-cursor))
   (let present-next
     ((lines (frame-render f))
      (line-number 1))
-    (unless (empty? lines)
-      (terminal-push (goto line-number 1) (first lines))
-      (present-next (rest lines) (add1 line-number)))))
+    (cond
+      ((not (empty? lines))
+       (terminal-push (goto line-number 1) (first lines))
+       (present-next (rest lines) (add1 line-number)))
+      ((frame-cursor-position f)
+       =>
+       (lambda (pos)
+         (terminal-push
+           (goto (position-line pos) (position-column pos))
+           (show-cursor))))
+      (else (void)))))
 
 (define (error-protect proc)
   (let/ec return/success

@@ -123,14 +123,15 @@
 
 ;; frames
 
-(struct frame (buffer size))
+(struct frame (buffer size cursor-position))
 
 (define (make-frame sz)
   (frame
     (build-list
       (size-height sz)
       (thunk* (list (element #f (make-string (size-width sz) #\space)))))
-    sz))
+    sz
+    #f))
 
 (define (frame-height f) (size-height (frame-size f)))
 (define (frame-width f) (size-width (frame-size f)))
@@ -176,6 +177,19 @@
                 (element st cnt-fitted)
                 f-column))))))))
 
+(define (frame-cursor-position-set f a pos)
+  (define f-line (+ (area-line a) (position-line pos)))
+  (define f-column (+ (area-column a) (position-column pos)))
+  (cond ((not pos)
+         (struct-copy frame f (cursor-position #f)))
+        ((or (not (position-fits-area? pos a))
+              (>= f-line (frame-height f))
+              (>= f-column (frame-width f)))
+         f)
+        (else
+         (struct-copy frame f
+           (cursor-position (position f-line f-column))))))
+
 (define (frame-render f)
   (map (lambda (line-elems)
          (apply string-append (map element-render line-elems)))
@@ -220,11 +234,13 @@
   (contract-out
     (struct frame
       ((buffer (listof (listof element?)))
-       (size size?))
+       (size size?)
+       (cursor-position (or/c #f position?)))
       #:omit-constructor)
     (make-frame (-> size? frame?))
     (frame-height (-> frame? exact-nonnegative-integer?))
     (frame-width (-> frame? exact-nonnegative-integer?))
     (frame-write (-> frame? area? position? (or/c #f style?) string? frame?))
+    (frame-cursor-position-set (-> frame? area? (or/c #f position?) frame?))
     (frame-render (-> frame? (listof string?)))))
 
